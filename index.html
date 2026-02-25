@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BetZone 1v1 — Retos entre Amigos</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #060608;
+  --s1: #0e0e16;
+  --s2: #16162a;
+  --s3: #1e1e38;
+  --border: #2e2e50;
+  --gold: #f5c842;
+  --gold2: #e8a000;
+  --red: #e84040;
+  --green: #30d080;
+  --blue: #4090ff;
+  --text: #eeeef8;
+  --muted: #6868a0;
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-body: 'Syne', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; }
+
+/* ── NOISE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 1000; opacity: 0.5;
+}
+
+/* ── AUTH SCREEN ── */
+#auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(245,200,66,0.12) 0%, transparent 70%);
+}
+.auth-box {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 48px 40px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.6);
+}
+.auth-logo {
+  font-family: var(--font-display);
+  font-size: 44px;
+  letter-spacing: 3px;
+  color: var(--gold);
+  text-align: center;
+  margin-bottom: 6px;
+}
+.auth-sub {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 36px;
+  letter-spacing: 0.5px;
+}
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--s2);
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 28px;
+  gap: 4px;
+}
+.auth-tab {
+  padding: 10px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
+}
+.auth-tab.active { background: var(--gold); color: #000; }
+.form-group { margin-bottom: 16px; }
+label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+input[type=text], input[type=email], input[type=password], input[type=number] {
+  width: 100%;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+input:focus { border-color: var(--gold); }
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: var(--gold);
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  margin-top: 8px;
+}
+.btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0); }
+.auth-msg { font-size: 12px; color: var(--red); text-align: center; margin-top: 12px; min-height: 18px; }
+.auth-msg.ok { color: var(--green); }
+
+/* ── APP ── */
+#app-screen { display: none; }
+
+/* HEADER */
+.header {
+  background: var(--s1);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-logo { font-family: var(--font-display); font-size: 26px; letter-spacing: 3px; color: var(--gold); }
+.header-right { display: flex; align-items: center; gap: 16px; }
+.wallet-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.wallet-amount { color: var(--gold); }
+.btn-sm {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: opacity 0.2s;
+}
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+.btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+.avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold), var(--gold2));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 14px; color: #000;
+  cursor: pointer;
+}
+
+/* NAV TABS */
+.nav-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 16px 24px 0;
+  background: var(--s1);
+  border-bottom: 1px solid var(--border);
+}
+.nav-tab {
+  padding: 10px 22px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.nav-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+/* MAIN CONTENT */
+.content { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
+
+/* STATS BAR */
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.stat-card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+.stat-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 6px; }
+.stat-value { font-family: var(--font-display); font-size: 28px; letter-spacing: 1px; }
+.stat-value.gold { color: var(--gold); }
+.stat-value.green { color: var(--green); }
+.stat-value.red { color: var(--red); }
+.stat-value.blue { color: var(--blue); }
+
+/* SECTION */
+.section { margin-bottom: 32px; }
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.section-title { font-family: var(--font-display); font-size: 22px; letter-spacing: 2px; color: var(--muted); }
+
+/* CREATE CHALLENGE */
+.challenge-form {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+}
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.btn-gold {
+  background: var(--gold);
+  color: #000;
+  padding: 12px 28px;
+  border-radius: 10px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 1.5px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.btn-gold:hover { opacity: 0.85; }
+
+/* CHALLENGE CARDS */
+.challenges-grid { display: flex; flex-direction: column; gap: 12px; }
+.challenge-card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px 24px;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 20px;
+  transition: border-color 0.2s;
+}
+.challenge-card:hover { border-color: var(--gold); }
+.ch-sport {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--gold); background: rgba(245,200,66,0.12);
+  padding: 3px 8px; border-radius: 4px;
+  display: inline-block; margin-bottom: 8px;
+}
+.ch-match { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.ch-pick { font-size: 12px; color: var(--muted); }
+.ch-creator { font-size: 11px; color: var(--muted); margin-top: 6px; }
+.ch-creator span { color: var(--blue); }
+.ch-amount {
+  text-align: center;
+}
+.ch-amount-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.ch-amount-value { font-family: var(--font-display); font-size: 28px; color: var(--gold); }
+.ch-pot { font-size: 11px; color: var(--muted); }
+.ch-pot span { color: var(--green); }
+.btn-accept {
+  padding: 12px 24px;
+  background: var(--green);
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+.btn-accept:hover { opacity: 0.82; }
+.btn-accept:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* STATUS BADGE */
+.status-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+  padding: 5px 10px; border-radius: 6px;
+}
+.status-open { background: rgba(48,208,128,0.15); color: var(--green); }
+.status-matched { background: rgba(64,144,255,0.15); color: var(--blue); }
+.status-won { background: rgba(48,208,128,0.15); color: var(--green); }
+.status-lost { background: rgba(232,64,64,0.15); color: var(--red); }
+.status-pending { background: rgba(245,200,66,0.15); color: var(--gold); }
+
+/* HISTORY TABLE */
+.history-table { width: 100%; border-collapse: collapse; }
+.history-table th {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--muted); padding: 10px 16px; text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.history-table td {
+  padding: 14px 16px; font-size: 14px;
+  border-bottom: 1px solid rgba(46,46,80,0.5);
+}
+.history-table tr:last-child td { border-bottom: none; }
+.history-table tr:hover td { background: var(--s2); }
+
+/* WALLET MODAL */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 999;
+  display: none;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 36px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.7);
+}
+.modal-title { font-family: var(--font-display); font-size: 28px; letter-spacing: 2px; margin-bottom: 24px; }
+.modal-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--s2); border-radius: 8px; padding: 4px; margin-bottom: 20px; }
+.modal-close {
+  position: absolute; top: 16px; right: 16px;
+  background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer;
+}
+
+/* TOAST */
+.toast {
+  position: fixed; bottom: 30px; right: 30px;
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 20px;
+  font-size: 14px; font-weight: 600;
+  z-index: 9999;
+  transform: translateY(80px); opacity: 0;
+  transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
+  max-width: 320px;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-color: var(--green); color: var(--green); }
+.toast.error { border-color: var(--red); color: var(--red); }
+.toast.info { border-color: var(--blue); color: var(--blue); }
+
+/* EMPTY STATE */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty-icon { font-size: 48px; margin-bottom: 16px; }
+.empty-title { font-family: var(--font-display); font-size: 24px; letter-spacing: 2px; margin-bottom: 8px; color: var(--text); }
+
+.page { display: none; }
+.page.active { display: block; }
+
+/* RESOLVE BUTTON (admin) */
+.btn-resolve {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-resolve:hover { background: var(--gold); color: #000; }
+
+@media (max-width: 700px) {
+  .stats-bar { grid-template-columns: 1fr 1fr; }
+  .form-grid, .form-row { grid-template-columns: 1fr; }
+  .challenge-card { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── AUTH ── -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">⚡ BetZone</div>
+    <div class="auth-sub">Retos 1v1 — Gana jugando</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Ingresar</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">Registrarse</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="login-form">
+      <div class="form-group">
+        <label>Correo</label>
+        <input type="email" id="login-email" placeholder="tu@correo.com">
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="login-password" placeholder="••••••••">
+      </div>
+      <button class="btn-primary" onclick="loginUser()">INGRESAR</button>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="register-form" style="display:none">
+      <div class="form-group">
+        <label>Nombre de usuario</label>
+        <input type="text" id="reg-username" placeholder="pepe_bets">
+      </div>
+      <div class="form-group">
+        <label>Correo</label>
+        <input type="email" id="reg-email" placeholder="tu@correo.com">
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres">
+      </div>
+      <button class="btn-primary" onclick="registerUser()">CREAR CUENTA</button>
+    </div>
+
+    <div class="auth-msg" id="auth-msg"></div>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div id="app-screen">
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-logo">⚡ BetZone</div>
+    <div class="header-right">
+      <div class="wallet-pill">
+        💰 S/ <span class="wallet-amount" id="header-balance">0.00</span>
+        <button class="btn-sm btn-outline" onclick="openWalletModal()">+ Depositar</button>
+      </div>
+      <div class="avatar" id="user-avatar" title="Mi perfil">?</div>
+    </div>
+  </header>
+
+  <!-- NAV -->
+  <nav class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('lobby')">🏟 Lobby</button>
+    <button class="nav-tab" onclick="showPage('create')">⚔️ Crear Reto</button>
+    <button class="nav-tab" onclick="showPage('my-bets')">📋 Mis Apuestas</button>
+    <button class="nav-tab" onclick="showPage('admin')" id="admin-tab" style="display:none">🔧 Admin</button>
+  </nav>
+
+  <div class="content">
+
+    <!-- STATS -->
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-label">Saldo Disponible</div>
+        <div class="stat-value gold">S/ <span id="stat-balance">0.00</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Retos Activos</div>
+        <div class="stat-value blue" id="stat-open">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Ganadas</div>
+        <div class="stat-value green" id="stat-won">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Ganancia Total</div>
+        <div class="stat-value green">S/ <span id="stat-profit">0.00</span></div>
+      </div>
+    </div>
+
+    <!-- PAGE: LOBBY -->
+    <div class="page active" id="page-lobby">
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title">Retos Disponibles</div>
+          <button class="btn-sm btn-outline" onclick="loadChallenges()">↺ Actualizar</button>
+        </div>
+        <div class="challenges-grid" id="challenges-list">
+          <div class="empty-state">
+            <div class="empty-icon">🥊</div>
+            <div class="empty-title">Cargando retos...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: CREATE -->
+    <div class="page" id="page-create">
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title">Crear Nuevo Reto</div>
+        </div>
+        <div class="challenge-form">
+          <div class="form-grid" style="margin-bottom:16px">
+            <div class="form-group" style="margin-bottom:0">
+              <label>Deporte</label>
+              <select id="c-sport" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--text);font-family:var(--font-body);font-size:14px;outline:none;">
+                <option>⚽ Fútbol</option>
+                <option>🏀 Básquet</option>
+                <option>🎾 Tenis</option>
+                <option>⚾ Béisbol</option>
+                <option>🥊 Boxeo</option>
+                <option>🏎 Fórmula 1</option>
+                <option>🏐 Vóleibol</option>
+                <option>Otro</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>Monto a apostar (S/)</label>
+              <input type="number" id="c-amount" placeholder="100" min="10" step="10">
+            </div>
+          </div>
+          <div class="form-grid" style="margin-bottom:16px">
+            <div class="form-group" style="margin-bottom:0">
+              <label>Equipo / Jugador A</label>
+              <input type="text" id="c-teamA" placeholder="Ej: Alianza Lima">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>Equipo / Jugador B</label>
+              <input type="text" id="c-teamB" placeholder="Ej: Universitario">
+            </div>
+          </div>
+          <div class="form-grid" style="margin-bottom:24px">
+            <div class="form-group" style="margin-bottom:0">
+              <label>Mi apuesta va por...</label>
+              <input type="text" id="c-my-pick" placeholder="Ej: Alianza Lima gana">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>Fecha / Hora del evento</label>
+              <input type="datetime-local" id="c-date">
+            </div>
+          </div>
+
+          <!-- Preview -->
+          <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px">Vista previa del reto</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+              <div>
+                <div style="font-weight:700;font-size:16px">Tu apuesta: <span style="color:var(--gold)" id="preview-pick">—</span></div>
+                <div style="color:var(--muted);font-size:13px;margin-top:4px">El oponente apuesta por el otro resultado</div>
+              </div>
+              <div style="text-align:center">
+                <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Monto cada uno</div>
+                <div style="font-family:var(--font-display);font-size:32px;color:var(--gold)">S/ <span id="preview-amount">0</span></div>
+                <div style="font-size:12px;color:var(--green)">Ganancia: S/ <span id="preview-win">0</span></div>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn-gold" onclick="createChallenge()">⚡ PUBLICAR RETO</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: MY BETS -->
+    <div class="page" id="page-my-bets">
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title">Mis Apuestas</div>
+        </div>
+        <div style="background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Partido</th>
+                <th>Mi apuesta</th>
+                <th>Rival</th>
+                <th>Monto</th>
+                <th>Estado</th>
+                <th>Ganancia</th>
+              </tr>
+            </thead>
+            <tbody id="my-bets-tbody">
+              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:40px">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: ADMIN -->
+    <div class="page" id="page-admin">
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title">Panel Admin — Resolver Retos</div>
+        </div>
+        <div style="background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Partido</th>
+                <th>Creador / Pick</th>
+                <th>Oponente / Pick</th>
+                <th>Monto c/u</th>
+                <th>Estado</th>
+                <th>Resolver</th>
+              </tr>
+            </thead>
+            <tbody id="admin-tbody">
+              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:40px">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- WALLET MODAL -->
+<div class="modal-overlay" id="wallet-modal">
+  <div class="modal" style="position:relative">
+    <button class="modal-close" onclick="closeWalletModal()">✕</button>
+    <div class="modal-title">💰 Mi Billetera</div>
+    <div class="modal-tabs">
+      <button class="auth-tab active" onclick="switchWalletTab('deposit')">Depositar</button>
+      <button class="auth-tab" onclick="switchWalletTab('withdraw')">Retirar</button>
+    </div>
+    <div id="wallet-deposit">
+      <div class="form-group">
+        <label>Monto a depositar (S/)</label>
+        <input type="number" id="deposit-amount" placeholder="50" min="10">
+      </div>
+      <div style="background:var(--s2);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;color:var(--muted)">
+        💳 En producción conecta aquí tu pasarela de pagos (Culqi, PayU, Mercado Pago). Por ahora se agrega directamente.
+      </div>
+      <button class="btn-primary" onclick="depositFunds()">DEPOSITAR</button>
+    </div>
+    <div id="wallet-withdraw" style="display:none">
+      <div class="form-group">
+        <label>Monto a retirar (S/)</label>
+        <input type="number" id="withdraw-amount" placeholder="50" min="10">
+      </div>
+      <div class="form-group">
+        <label>Número de cuenta / Yape / Plin</label>
+        <input type="text" id="withdraw-account" placeholder="9XXXXXXXX">
+      </div>
+      <button class="btn-primary" onclick="withdrawFunds()">SOLICITAR RETIRO</button>
+    </div>
+    <div class="auth-msg" id="wallet-msg"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  🔧 CONFIGURACIÓN — Reemplaza con tus credenciales de Supabase
+//  1. Ve a https://supabase.com → New Project
+//  2. Settings → API → copia URL y anon key
+// ══════════════════════════════════════════════════════════
+const SUPABASE_URL = 'TU_SUPABASE_URL';
+const SUPABASE_KEY = 'TU_SUPABASE_ANON_KEY';
+const ADMIN_EMAILS = ['admin@betzone.com']; // Emails con acceso admin
+const COMMISSION = 0.05; // 5% comisión del pozo
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+let currentProfile = null;
+
+// ── UTILS ──
+function toast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+function fmt(n) { return Number(n).toLocaleString('es-PE', { minimumFractionDigits: 2 }); }
+
+// ── AUTH ──
+function switchAuthTab(tab) {
+  document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+  document.querySelectorAll('.auth-tab').forEach((b, i) => b.classList.toggle('active', (i === 0) === (tab === 'login')));
+}
+
+async function loginUser() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const msg = document.getElementById('auth-msg');
+  msg.textContent = 'Ingresando...'; msg.className = 'auth-msg';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) { msg.textContent = error.message; return; }
+  msg.textContent = '';
+}
+
+async function registerUser() {
+  const username = document.getElementById('reg-username').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const msg = document.getElementById('auth-msg');
+  if (!username || !email || !password) { msg.textContent = 'Completa todos los campos'; return; }
+  msg.textContent = 'Creando cuenta...'; msg.className = 'auth-msg';
+  const { data, error } = await sb.auth.signUp({ email, password, options: { data: { username } } });
+  if (error) { msg.textContent = error.message; return; }
+  msg.textContent = '✅ Cuenta creada. Revisa tu correo para confirmar.'; msg.className = 'auth-msg ok';
+}
+
+async function initApp(user) {
+  currentUser = user;
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+  const initial = (user.user_metadata?.username || user.email || '?')[0].toUpperCase();
+  document.getElementById('user-avatar').textContent = initial;
+  // Admin check
+  if (ADMIN_EMAILS.includes(user.email)) {
+    document.getElementById('admin-tab').style.display = '';
+  }
+  await loadProfile();
+  await loadChallenges();
+  await loadMyBets();
+  setupPreview();
+}
+
+// ── PROFILE ──
+async function loadProfile() {
+  const { data, error } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  if (error || !data) {
+    // Create profile if not exists
+    await sb.from('profiles').insert({ id: currentUser.id, username: currentUser.user_metadata?.username || currentUser.email, balance: 0, total_won: 0, total_lost: 0 });
+    currentProfile = { balance: 0, total_won: 0, total_lost: 0 };
+  } else {
+    currentProfile = data;
+  }
+  updateBalanceUI();
+}
+
+function updateBalanceUI() {
+  const b = currentProfile?.balance || 0;
+  document.getElementById('header-balance').textContent = fmt(b);
+  document.getElementById('stat-balance').textContent = fmt(b);
+  document.getElementById('stat-won').textContent = currentProfile?.total_won || 0;
+  document.getElementById('stat-profit').textContent = fmt(currentProfile?.total_profit || 0);
+}
+
+// ── CHALLENGES ──
+async function loadChallenges() {
+  const { data, error } = await sb.from('challenges')
+    .select('*, creator:profiles!challenges_creator_id_fkey(username), opponent:profiles!challenges_opponent_id_fkey(username)')
+    .eq('status', 'open')
+    .neq('creator_id', currentUser.id)
+    .order('created_at', { ascending: false });
+
+  const { count } = await sb.from('challenges').select('*', { count: 'exact', head: true }).eq('status', 'open');
+  document.getElementById('stat-open').textContent = count || 0;
+
+  const container = document.getElementById('challenges-list');
+  if (!data || data.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🥊</div><div class="empty-title">Sin retos disponibles</div><div style="color:var(--muted);margin-top:8px">¡Crea el primero!</div></div>`;
+    return;
+  }
+  container.innerHTML = data.map(ch => {
+    const pozo = ch.amount * 2;
+    const ganancia = pozo * (1 - COMMISSION);
+    const opponentPick = `${ch.team_b} (o empate)`;
+    return `
+    <div class="challenge-card">
+      <div>
+        <span class="ch-sport">${ch.sport}</span>
+        <div class="ch-match">${ch.team_a} vs ${ch.team_b}</div>
+        <div class="ch-pick">🎯 ${ch.creator?.username} apuesta por: <strong>${ch.creator_pick}</strong></div>
+        <div class="ch-pick" style="margin-top:3px">Tu apuesta sería por: <strong style="color:var(--blue)">${ch.opponent_pick_label || opponentPick}</strong></div>
+        <div class="ch-creator" style="margin-top:6px">📅 ${new Date(ch.event_date).toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+      </div>
+      <div class="ch-amount">
+        <div class="ch-amount-label">Tu depósito</div>
+        <div class="ch-amount-value">S/ ${fmt(ch.amount)}</div>
+        <div class="ch-pot">Ganancia: <span>S/ ${fmt(ganancia)}</span></div>
+      </div>
+      <button class="btn-accept" onclick="acceptChallenge('${ch.id}', ${ch.amount})">
+        ⚔️ ACEPTAR
+      </button>
+    </div>`;
+  }).join('');
+}
+
+async function createChallenge() {
+  const sport = document.getElementById('c-sport').value;
+  const teamA = document.getElementById('c-teamA').value.trim();
+  const teamB = document.getElementById('c-teamB').value.trim();
+  const myPick = document.getElementById('c-my-pick').value.trim();
+  const amount = parseFloat(document.getElementById('c-amount').value);
+  const date = document.getElementById('c-date').value;
+
+  if (!teamA || !teamB || !myPick || !amount || !date) { toast('Completa todos los campos', 'error'); return; }
+  if (amount < 10) { toast('El mínimo es S/ 10', 'error'); return; }
+  if ((currentProfile?.balance || 0) < amount) { toast('Saldo insuficiente. Deposita primero.', 'error'); return; }
+
+  // Deduct balance
+  const newBalance = (currentProfile.balance || 0) - amount;
+  await sb.from('profiles').update({ balance: newBalance }).eq('id', currentUser.id);
+  currentProfile.balance = newBalance;
+
+  const { error } = await sb.from('challenges').insert({
+    creator_id: currentUser.id,
+    sport,
+    team_a: teamA,
+    team_b: teamB,
+    creator_pick: myPick,
+    amount,
+    event_date: new Date(date).toISOString(),
+    status: 'open'
+  });
+
+  if (error) {
+    // Refund
+    await sb.from('profiles').update({ balance: currentProfile.balance + amount }).eq('id', currentUser.id);
+    toast('Error al crear reto: ' + error.message, 'error'); return;
+  }
+
+  updateBalanceUI();
+  toast('✅ Reto publicado exitosamente!', 'success');
+  showPage('lobby');
+  loadChallenges();
+}
+
+async function acceptChallenge(id, amount) {
+  if ((currentProfile?.balance || 0) < amount) { toast('Saldo insuficiente. Deposita primero.', 'error'); return; }
+  if (!confirm(`¿Aceptar este reto por S/ ${fmt(amount)}?`)) return;
+
+  // Deduct balance
+  const newBalance = (currentProfile.balance || 0) - amount;
+  await sb.from('profiles').update({ balance: newBalance }).eq('id', currentUser.id);
+  currentProfile.balance = newBalance;
+
+  const { error } = await sb.from('challenges').update({
+    opponent_id: currentUser.id,
+    status: 'matched',
+    matched_at: new Date().toISOString()
+  }).eq('id', id).eq('status', 'open');
+
+  if (error) {
+    await sb.from('profiles').update({ balance: currentProfile.balance + amount }).eq('id', currentUser.id);
+    toast('Error: ' + error.message, 'error'); return;
+  }
+
+  updateBalanceUI();
+  toast('⚔️ Reto aceptado! Espera el resultado.', 'success');
+  loadChallenges();
+  loadMyBets();
+}
+
+// ── MY BETS ──
+async function loadMyBets() {
+  const { data } = await sb.from('challenges')
+    .select('*, creator:profiles!challenges_creator_id_fkey(username), opponent:profiles!challenges_opponent_id_fkey(username)')
+    .or(`creator_id.eq.${currentUser.id},opponent_id.eq.${currentUser.id}`)
+    .order('created_at', { ascending: false });
+
+  const tbody = document.getElementById('my-bets-tbody');
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:40px">Aún no tienes apuestas</td></tr>';
+    return;
+  }
+
+  const statusMap = { open: 'status-open', matched: 'status-matched', won_creator: 'status-won', won_opponent: 'status-won', cancelled: 'status-lost' };
+  const statusLabel = { open: '🟢 Abierto', matched: '🔵 En juego', won_creator: '🏆 Resuelto', won_opponent: '🏆 Resuelto', cancelled: '❌ Cancelado' };
+
+  tbody.innerHTML = data.map(ch => {
+    const isCreator = ch.creator_id === currentUser.id;
+    const myPick = isCreator ? ch.creator_pick : (ch.opponent_pick_label || 'Resultado contrario');
+    const rival = isCreator ? (ch.opponent?.username || '—') : ch.creator?.username;
+    let ganancia = '—';
+    if (ch.status === 'won_creator' && isCreator || ch.status === 'won_opponent' && !isCreator) {
+      ganancia = `<span style="color:var(--green)">+S/ ${fmt(ch.amount * 2 * (1 - COMMISSION))}</span>`;
+    } else if (ch.status === 'won_creator' && !isCreator || ch.status === 'won_opponent' && isCreator) {
+      ganancia = `<span style="color:var(--red)">-S/ ${fmt(ch.amount)}</span>`;
+    }
+    return `<tr>
+      <td><div style="font-weight:700">${ch.team_a} vs ${ch.team_b}</div><div style="font-size:11px;color:var(--muted)">${ch.sport}</div></td>
+      <td>${myPick}</td>
+      <td>${rival}</td>
+      <td>S/ ${fmt(ch.amount)}</td>
+      <td><span class="status-badge ${statusMap[ch.status] || ''}">${statusLabel[ch.status] || ch.status}</span></td>
+      <td>${ganancia}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── ADMIN ──
+async function loadAdmin() {
+  const { data } = await sb.from('challenges')
+    .select('*, creator:profiles!challenges_creator_id_fkey(username, id), opponent:profiles!challenges_opponent_id_fkey(username, id)')
+    .in('status', ['matched'])
+    .order('created_at', { ascending: false });
+
+  const tbody = document.getElementById('admin-tbody');
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:40px">Sin retos por resolver</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(ch => `
+    <tr>
+      <td><strong>${ch.team_a} vs ${ch.team_b}</strong><br><span style="font-size:11px;color:var(--muted)">${ch.sport}</span></td>
+      <td>${ch.creator?.username}<br><span style="font-size:11px;color:var(--gold)">${ch.creator_pick}</span></td>
+      <td>${ch.opponent?.username || '—'}<br><span style="font-size:11px;color:var(--blue)">Resultado contrario</span></td>
+      <td>S/ ${fmt(ch.amount)}</td>
+      <td><span class="status-badge status-matched">En Juego</span></td>
+      <td style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-resolve" onclick="resolveChallenge('${ch.id}', 'won_creator', '${ch.creator_id}', '${ch.opponent_id}', ${ch.amount})">
+          ✅ Ganó ${ch.creator?.username}
+        </button>
+        <button class="btn-resolve" style="border-color:var(--blue);color:var(--blue)" onclick="resolveChallenge('${ch.id}', 'won_opponent', '${ch.creator_id}', '${ch.opponent_id}', ${ch.amount})">
+          ✅ Ganó ${ch.opponent?.username}
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+async function resolveChallenge(id, result, creatorId, opponentId, amount) {
+  const pozo = amount * 2;
+  const ganancia = pozo * (1 - COMMISSION);
+  const winnerId = result === 'won_creator' ? creatorId : opponentId;
+  if (!confirm(`¿Confirmar resultado? El ganador recibe S/ ${fmt(ganancia)}`)) return;
+
+  // Update challenge status
+  await sb.from('challenges').update({ status: result }).eq('id', id);
+
+  // Credit winner
+  const { data: winnerProfile } = await sb.from('profiles').select('balance, total_won, total_profit').eq('id', winnerId).single();
+  await sb.from('profiles').update({
+    balance: (winnerProfile.balance || 0) + ganancia,
+    total_won: (winnerProfile.total_won || 0) + 1,
+    total_profit: (winnerProfile.total_profit || 0) + (ganancia - amount)
+  }).eq('id', winnerId);
+
+  toast('✅ Resultado registrado. El ganador fue acreditado.', 'success');
+  loadAdmin();
+}
+
+// ── WALLET ──
+function openWalletModal() { document.getElementById('wallet-modal').classList.add('open'); }
+function closeWalletModal() { document.getElementById('wallet-modal').classList.remove('open'); }
+function switchWalletTab(tab) {
+  document.getElementById('wallet-deposit').style.display = tab === 'deposit' ? 'block' : 'none';
+  document.getElementById('wallet-withdraw').style.display = tab === 'withdraw' ? 'block' : 'none';
+  document.querySelectorAll('#wallet-modal .auth-tab').forEach((b,i) => b.classList.toggle('active', (i===0)===(tab==='deposit')));
+}
+
+async function depositFunds() {
+  const amount = parseFloat(document.getElementById('deposit-amount').value);
+  const msg = document.getElementById('wallet-msg');
+  if (!amount || amount < 10) { msg.textContent = 'Mínimo S/ 10'; return; }
+
+  // En producción: primero verifica el pago con tu pasarela, luego acredita
+  const newBalance = (currentProfile.balance || 0) + amount;
+  const { error } = await sb.from('profiles').update({ balance: newBalance }).eq('id', currentUser.id);
+  if (error) { msg.textContent = 'Error: ' + error.message; return; }
+
+  // Log transaction
+  await sb.from('transactions').insert({ user_id: currentUser.id, type: 'deposit', amount, status: 'completed' });
+  currentProfile.balance = newBalance;
+  updateBalanceUI();
+  msg.textContent = `✅ S/ ${fmt(amount)} depositados`; msg.className = 'auth-msg ok';
+  toast(`💰 S/ ${fmt(amount)} agregados a tu wallet`, 'success');
+}
+
+async function withdrawFunds() {
+  const amount = parseFloat(document.getElementById('withdraw-amount').value);
+  const account = document.getElementById('withdraw-account').value.trim();
+  const msg = document.getElementById('wallet-msg');
+  if (!amount || amount < 10) { msg.textContent = 'Mínimo S/ 10'; return; }
+  if (!account) { msg.textContent = 'Ingresa tu número de cuenta'; return; }
+  if ((currentProfile.balance || 0) < amount) { msg.textContent = 'Saldo insuficiente'; return; }
+
+  const newBalance = (currentProfile.balance || 0) - amount;
+  await sb.from('profiles').update({ balance: newBalance }).eq('id', currentUser.id);
+  await sb.from('transactions').insert({ user_id: currentUser.id, type: 'withdrawal', amount, status: 'pending', account_info: account });
+  currentProfile.balance = newBalance;
+  updateBalanceUI();
+  msg.textContent = '✅ Solicitud enviada. Procesamos en 24h.'; msg.className = 'auth-msg ok';
+  toast('📤 Solicitud de retiro enviada', 'info');
+}
+
+// ── NAVIGATION ──
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`page-${name}`).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'admin') loadAdmin();
+  if (name === 'my-bets') loadMyBets();
+  if (name === 'lobby') loadChallenges();
+}
+
+// ── PREVIEW ──
+function setupPreview() {
+  ['c-amount', 'c-my-pick', 'c-teamA', 'c-teamB'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updatePreview);
+  });
+}
+function updatePreview() {
+  const pick = document.getElementById('c-my-pick').value || '—';
+  const amount = parseFloat(document.getElementById('c-amount').value) || 0;
+  document.getElementById('preview-pick').textContent = pick;
+  document.getElementById('preview-amount').textContent = fmt(amount);
+  document.getElementById('preview-win').textContent = fmt(amount * 2 * (1 - COMMISSION));
+}
+
+// ── BOOT ──
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (session?.user) {
+    await initApp(session.user);
+  } else {
+    document.getElementById('auth-screen').style.display = 'flex';
+    document.getElementById('app-screen').style.display = 'none';
+  }
+});
+
+async function logout() {
+  await sb.auth.signOut();
+}
+document.getElementById('user-avatar').addEventListener('click', () => {
+  if (confirm('¿Cerrar sesión?')) logout();
+});
+</script>
+</body>
+</html>
